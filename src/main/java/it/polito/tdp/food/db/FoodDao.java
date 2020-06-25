@@ -6,6 +6,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
+import it.polito.tdp.food.model.Adiacenza;
 import it.polito.tdp.food.model.Condiment;
 import it.polito.tdp.food.model.Food;
 import it.polito.tdp.food.model.Portion;
@@ -109,6 +112,66 @@ public class FoodDao {
 
 	}
 	
+	public List<String> listPortionsType(double calorie){
+		String sql = "SELECT DISTINCT portion_display_name FROM `portion` WHERE calories<?" ;
+		
+		try {
+			Connection conn = DBConnect.getConnection() ;
+			
+			List<String> tipi = new ArrayList<String>();
+
+			PreparedStatement st = conn.prepareStatement(sql) ;
+			st.setDouble(1, calorie);
+			
+			ResultSet res = st.executeQuery() ;
+			
+			while(res.next()) {
+				
+				tipi.add(res.getString("portion_display_name"));
+			}
+			
+			conn.close();
+			return tipi;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return null;
+		}
+
+	}
 	
+	public List<Adiacenza> listAdiacenze(double calorie){
+		String sql = "SELECT p1.portion_display_name AS po1, p2.portion_display_name AS po2, COUNT(DISTINCT p1.food_code) AS peso FROM `portion` AS p1, `portion` AS p2 " + 
+				"WHERE p1.portion_display_name>p2.portion_display_name " + 
+				"AND p1.food_code=p2.food_code " + 
+				// "AND p1.calories<? AND p2.calories<? " +  // Non mi chiede che il peso sia dato solo dai cibi con calorie minori di tot (AMBIGUO)
+				// ATT!! Perche' cosi' genero nuovi vertici che hanno appunto calorie maggiori, ma che concorrono al peso
+				"GROUP BY p1.portion_display_name, p2.portion_display_name " + 
+				"HAVING peso>0";
+		
+		try {
+			Connection conn = DBConnect.getConnection() ;
+
+			PreparedStatement st = conn.prepareStatement(sql) ;
+			
+			List<Adiacenza> list = new ArrayList<>() ;
+//			st.setDouble(1, calorie);
+//			st.setDouble(2, calorie);
+			
+			ResultSet res = st.executeQuery() ;
+			
+			while(res.next()) {
+				list.add(new Adiacenza(res.getString("po1"), res.getString("po2"), res.getInt("peso")));
+			}
+			
+			conn.close();
+			return list;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return null;
+		}
+
+	}
 
 }
